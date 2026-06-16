@@ -187,16 +187,35 @@
 }
 
 .queue-calls {
-    min-width: 96px;
-    min-height: 22px;
-    border-radius: 11px;
+    min-width: 42px;
+    width: 42px;
+    min-height: 34px;
     background: #f0ad00;
     color: #fff;
-    font-size: 12px;
-    line-height: 16px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 4px;
     text-align: center;
+    flex-shrink: 0;
+}
+
+.queue-calls-number {
+    display: block;
+    font-size: 14px;
+    line-height: 14px;
     font-weight: bold;
-    padding: 3px 8px;
+}
+
+.queue-calls-label {
+    display: block;
+    margin-top: 1px;
+    font-size: 8px;
+    line-height: 9px;
+    font-weight: normal;
+    white-space: nowrap;
 }
 
 .queue-subtitle {

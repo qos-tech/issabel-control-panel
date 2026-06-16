@@ -125,11 +125,7 @@ class QueuesService
         $statusCode = isset($event['Status']) ? (string)$event['Status'] : '0';
         $location = $this->readFirst($event, array('Location', 'Interface'), '');
         $extension = $this->extractExtension($location);
-        $displayName = '';
-
-        if ($extension !== '') {
-            $displayName = $this->getMemberDisplayName($ami, $extension);
-        }
+        $displayName = $this->getMemberDisplayName($ami, $extension, $location);
 
         return array(
             'name' => $this->readFirst($event, array('Name', 'MemberName', 'Member'), ''),
@@ -218,23 +214,27 @@ class QueuesService
         return '';
     }
 
-    private function getMemberDisplayName($ami, $extension)
+    private function getMemberDisplayName($ami, $extension, $location)
     {
-        if (isset($this->memberDisplayNames[$extension])) {
+        if ($extension !== '' && isset($this->memberDisplayNames[$extension])) {
             return $this->memberDisplayNames[$extension];
         }
 
-        $displayName = '';
+        $displayName = $location;
 
-        try {
-            $lines = $ami->command('database get AMPUSER/' . $extension . ' cidname', 2);
-            $cidName = $this->parseDatabaseGetValue($lines);
-            $displayName = $this->cleanMemberDisplayName($extension, $cidName);
-        } catch (Exception $e) {
-            $displayName = $extension;
+        if ($extension !== '') {
+            try {
+                $lines = $ami->command('database get AMPUSER/' . $extension . ' cidname', 2);
+                $cidName = $this->parseDatabaseGetValue($lines);
+                $displayName = $this->buildMemberDisplayName($extension, $cidName, $location);
+            } catch (Exception $e) {
+                $displayName = $extension;
+            }
         }
 
-        $this->memberDisplayNames[$extension] = $displayName;
+        if ($extension !== '') {
+            $this->memberDisplayNames[$extension] = $displayName;
+        }
 
         return $displayName;
     }
@@ -256,23 +256,30 @@ class QueuesService
         return '';
     }
 
-    private function cleanMemberDisplayName($extension, $cidName)
+    private function buildMemberDisplayName($extension, $cidName, $location)
     {
         $extension = trim((string)$extension);
         $cidName = trim((string)$cidName);
+        $location = trim((string)$location);
 
         if ($cidName === '') {
-            return $extension;
+            if ($extension !== '') {
+                return $extension;
+            }
+
+            return $location;
         }
 
-        $pattern = '/^Ramal[[:space:]]+' . preg_quote($extension, '/') . '[[:space:]]*-[[:space:]]*/i';
-        $cleanName = preg_replace($pattern, '', $cidName);
-        $cleanName = trim(preg_replace('/[[:space:]]+/', ' ', $cleanName));
+        $cidName = trim(preg_replace('/[[:space:]]+/', ' ', $cidName));
 
-        if ($cleanName !== '') {
-            return $cleanName;
+        if ($extension !== '') {
+            if (preg_match('/<' . preg_quote($extension, '/') . '>[[:space:]]*$/', $cidName)) {
+                return $cidName;
+            }
+
+            return $cidName . ' <' . $extension . '>';
         }
 
-        return $extension;
+        return $cidName !== '' ? $cidName : $location;
     }
 }

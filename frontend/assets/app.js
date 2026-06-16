@@ -194,7 +194,10 @@ function renderQueueCard(queue) {
         '<div class="queue-card" title="' + escapeHtml(titleParts.join(' | ')) + '">' +
             '<div class="queue-card-header">' +
                 '<div class="queue-title">Fila ' + escapeHtml(queueId) + '</div>' +
-                '<div class="queue-calls">Aguardando: ' + waiting + '</div>' +
+                '<div class="queue-calls" title="Aguardando: ' + waiting + '">' +
+                    '<span class="queue-calls-number">' + waiting + '</span>' +
+                    '<span class="queue-calls-label">aguard.</span>' +
+                '</div>' +
             '</div>' +
             '<div class="queue-subtitle">' + escapeHtml(queueName || 'Fila') + '</div>' +
             '<div class="queue-stats">' +
