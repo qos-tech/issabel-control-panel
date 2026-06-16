@@ -47,6 +47,7 @@ function renderPanel(data, grid, summary, lastUpdate) {
     var queues = ensureArray(data.queues).filter(function (queue) {
         return !isDefaultQueue(queue);
     });
+    var summaryData = data && data.summary ? data.summary : {};
 
     var totalExtensions = extensions.length;
     var online = countByStatus(extensions, 'online');
@@ -83,7 +84,7 @@ function renderPanel(data, grid, summary, lastUpdate) {
     }
 
     grid.innerHTML = html;
-    lastUpdate.innerHTML = 'Atualizado em ' + new Date().toLocaleTimeString();
+    lastUpdate.innerHTML = buildLastUpdateLabel(summaryData);
 }
 
 function renderSection(title, items) {
@@ -414,6 +415,17 @@ function ensureArray(value) {
     return Array.isArray(value) ? value : [];
 }
 
+function buildLastUpdateLabel(summaryData) {
+    var label = 'Atualizado em ' + new Date().toLocaleTimeString();
+    var elapsed = summaryData && summaryData.elapsed_ms ? parseInt(summaryData.elapsed_ms, 10) : 0;
+
+    if (!isNaN(elapsed) && elapsed > 0) {
+        label += ' · ' + elapsed + 'ms';
+    }
+
+    return label;
+}
+
 function isDefaultQueue(queue) {
     var queueId = String(queue && queue.queue ? queue.queue : '').toLowerCase();
     var queueName = String(queue && queue.name ? queue.name : '').toLowerCase();
@@ -437,4 +449,4 @@ function escapeHtml(value) {
 }
 
 loadStatus();
-setInterval(loadStatus, 2000);
+setInterval(loadStatus, 1500);
