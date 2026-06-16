@@ -1,0 +1,207 @@
+.qphone-panel {
+    font-family: Arial, sans-serif;
+    padding: 10px;
+    color: #2f2f2f;
+}
+
+.qphone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-left: 5px solid #2c7be5;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.qphone-header h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: bold;
+}
+
+.qphone-header p {
+    margin: 3px 0 0 0;
+    color: #666;
+    font-size: 12px;
+}
+
+.qphone-status {
+    font-size: 12px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.summary-card {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    padding: 6px 9px;
+    min-width: 72px;
+}
+
+.summary-card strong {
+    display: block;
+    font-size: 17px;
+    line-height: 18px;
+}
+
+.summary-card span {
+    font-size: 10px;
+    color: #666;
+}
+
+.extensions-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.device-section {
+    width: 100%;
+}
+
+.device-section h3 {
+    margin: 5px 0 7px 0;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+}
+
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+    gap: 5px;
+}
+
+.extension-card {
+    border-radius: 6px;
+    min-height: 43px;
+    height: 43px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-weight: bold;
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.13);
+    transition: all 0.12s ease-in-out;
+    position: relative;
+    padding: 3px;
+    overflow: hidden;
+    cursor: default;
+}
+
+.extension-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 7px rgba(0,0,0,0.18);
+}
+
+.extension-number {
+    font-size: 17px;
+    line-height: 18px;
+    max-width: 100%;
+    text-align: center;
+    word-break: break-word;
+}
+
+.extension-label {
+    font-size: 8px;
+    line-height: 10px;
+    margin-top: 2px;
+    font-weight: normal;
+    opacity: 0.95;
+    white-space: nowrap;
+}
+
+.extension-card.online {
+    background: #28a745;
+}
+
+.extension-card.busy {
+    background: #f0ad00;
+}
+
+.extension-card.ringing {
+    background: #007bff;
+    animation: ringPulse 1s infinite;
+}
+
+.extension-card.offline {
+    background: #dc3545;
+}
+
+.extension-card.unknown {
+    background: #6c757d;
+}
+
+.loading {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 12px;
+    border-radius: 8px;
+    color: #666;
+}
+
+@keyframes ringPulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.04);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 768px) {
+    .qphone-panel {
+        padding: 8px;
+    }
+
+    .qphone-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .device-grid {
+        grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+        gap: 4px;
+    }
+
+    .extension-card {
+        min-height: 40px;
+        height: 40px;
+    }
+
+    .extension-number {
+        font-size: 15px;
+    }
+
+    .extension-label {
+        font-size: 8px;
+    }
+
+    .summary-card {
+        min-width: 64px;
+        padding: 5px 8px;
+    }
+
+    .summary-card strong {
+        font-size: 15px;
+    }
+}

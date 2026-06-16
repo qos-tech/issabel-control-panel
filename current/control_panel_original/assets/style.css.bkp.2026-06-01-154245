@@ -1,0 +1,203 @@
+.control-panel {
+    font-family: Arial, sans-serif;
+    padding: 15px;
+    color: #2f2f2f;
+}
+
+.control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-left: 5px solid #2c7be5;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+}
+
+.control-header h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.control-header p {
+    margin: 4px 0 0 0;
+    color: #666;
+}
+
+.control-status {
+    font-size: 13px;
+    color: #666;
+}
+
+.summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.summary-card {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 110px;
+}
+
+.summary-card strong {
+    display: block;
+    font-size: 22px;
+    line-height: 24px;
+}
+
+.summary-card span {
+    font-size: 12px;
+    color: #666;
+}
+
+.extensions-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+}
+
+.device-section {
+    width: 100%;
+}
+
+.device-section h3 {
+    margin: 8px 0 10px 0;
+    font-size: 17px;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 6px;
+}
+
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+    gap: 10px;
+}
+
+.extension-card {
+    border-radius: 10px;
+    min-height: 86px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-weight: bold;
+    color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+    transition: all 0.15s ease-in-out;
+    position: relative;
+    padding: 8px;
+    overflow: hidden;
+}
+
+.extension-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.16);
+}
+
+.extension-number {
+    font-size: 27px;
+    line-height: 30px;
+    max-width: 100%;
+    text-align: center;
+    word-break: break-word;
+}
+
+.extension-label {
+    font-size: 11px;
+    margin-top: 5px;
+    font-weight: normal;
+    opacity: 0.95;
+}
+
+.extension-tech {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    font-size: 9px;
+    opacity: 0.75;
+    font-weight: normal;
+}
+
+.extension-description {
+    font-size: 10px;
+    margin-top: 4px;
+    font-weight: normal;
+    opacity: 0.9;
+    text-align: center;
+    max-width: 95px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.extension-card.online {
+    background: #28a745;
+}
+
+.extension-card.busy {
+    background: #f0ad00;
+}
+
+.extension-card.ringing {
+    background: #007bff;
+    animation: ringPulse 1s infinite;
+}
+
+.extension-card.offline {
+    background: #dc3545;
+}
+
+.extension-card.unknown {
+    background: #6c757d;
+}
+
+.loading {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 8px;
+    color: #666;
+}
+
+@keyframes ringPulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.04);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 768px) {
+    .control-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .device-grid {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    }
+
+    .extension-card {
+        min-height: 76px;
+    }
+
+    .extension-number {
+        font-size: 23px;
+    }
+}

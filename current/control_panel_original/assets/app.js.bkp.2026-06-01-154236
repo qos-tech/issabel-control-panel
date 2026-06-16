@@ -1,0 +1,153 @@
+async function loadStatus() {
+    const grid = document.getElementById('extensions-grid');
+    const lastUpdate = document.getElementById('last-update');
+    const summary = document.getElementById('summary');
+
+    try {
+        const response = await fetch('/modules/control_panel/api/status.php?_=' + Date.now());
+        const data = await response.json();
+
+        if (!data.success) {
+            grid.innerHTML = `<div class="loading">Erro: ${escapeHtml(data.error || 'falha desconhecida')}</div>`;
+            return;
+        }
+
+        const extensions = data.extensions || [];
+        const trunks = data.trunks || [];
+        const unknown = data.unknown || [];
+
+        const totalExtensions = extensions.length;
+        const online = extensions.filter(e => getCardClass(e) === 'online').length;
+        const busy = extensions.filter(e => getCardClass(e) === 'busy').length;
+        const ringing = extensions.filter(e => getCardClass(e) === 'ringing').length;
+        const offline = extensions.filter(e => getCardClass(e) === 'offline').length;
+        const unknownCount = extensions.filter(e => getCardClass(e) === 'unknown').length;
+
+        summary.innerHTML = `
+            <div class="summary-card"><strong>${totalExtensions}</strong><span>Ramais</span></div>
+            <div class="summary-card"><strong>${online}</strong><span>Livre</span></div>
+            <div class="summary-card"><strong>${busy}</strong><span>Em chamada</span></div>
+            <div class="summary-card"><strong>${ringing}</strong><span>Tocando</span></div>
+            <div class="summary-card"><strong>${offline}</strong><span>Offline</span></div>
+            <div class="summary-card"><strong>${trunks.length}</strong><span>Troncos</span></div>
+            <div class="summary-card"><strong>${unknownCount}</strong><span>Desconhecido</span></div>
+        `;
+
+        let html = '';
+
+        html += renderSection('Ramais', extensions);
+
+        if (trunks.length > 0) {
+            html += renderSection('Troncos', trunks);
+        }
+
+        if (unknown.length > 0) {
+            html += renderSection('Desconhecidos', unknown);
+        }
+
+        if (html === '') {
+            html = '<div class="loading">Nenhum dispositivo encontrado.</div>';
+        }
+
+        grid.innerHTML = html;
+
+        lastUpdate.innerText = 'Atualizado em ' + new Date().toLocaleTimeString();
+
+    } catch (error) {
+        grid.innerHTML = `<div class="loading">Erro ao carregar painel: ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+function renderSection(title, items) {
+    if (!items || items.length === 0) {
+        return '';
+    }
+
+    return `
+        <div class="device-section">
+            <h3>${escapeHtml(title)}</h3>
+            <div class="device-grid">
+                ${items.map(item => renderCard(item)).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderCard(item) {
+    const cardClass = getCardClass(item);
+    const label = getStatusLabel(item);
+
+    const name = item.name || item.extension || '-';
+    const description = item.label && item.label !== name ? item.label : '';
+    const tech = item.tech || '';
+
+    return `
+        <div class="extension-card ${cardClass}" title="${escapeHtml(description || name)} - ${escapeHtml(label)}">
+            <div class="extension-tech">${escapeHtml(tech)}</div>
+            <div class="extension-number">${escapeHtml(name)}</div>
+            <div class="extension-label">${escapeHtml(label)}</div>
+            ${description ? `<div class="extension-description">${escapeHtml(description)}</div>` : ''}
+        </div>
+    `;
+}
+
+function getCardClass(item) {
+    const status = String(item.status || '').toLowerCase();
+    const state = String(item.device_state || '').toLowerCase();
+    const contact = String(item.contact_status || '').toLowerCase();
+    const activeChannels = Number(item.active_channels || 0);
+
+    if (status === 'ringing') return 'ringing';
+    if (status === 'busy') return 'busy';
+    if (status === 'online') return 'online';
+    if (status === 'offline') return 'offline';
+
+    if (state.includes('ring')) {
+        return 'ringing';
+    }
+
+    if (state.includes('not in use')) {
+        if (contact === 'unreachable' || contact === 'unknown') {
+            return 'offline';
+        }
+
+        return 'online';
+    }
+
+    if (state.includes('busy') || state.includes('in use') || activeChannels > 0) {
+        return 'busy';
+    }
+
+    if (contact === 'reachable' || contact === 'nonqualified' || contact.includes('ok')) {
+        return 'online';
+    }
+
+    if (contact === 'unreachable' || contact === 'unknown') {
+        return 'offline';
+    }
+
+    return 'unknown';
+}
+
+function getStatusLabel(item) {
+    const cardClass = getCardClass(item);
+
+    if (cardClass === 'ringing') return 'Tocando';
+    if (cardClass === 'busy') return 'Em chamada';
+    if (cardClass === 'online') return 'Livre';
+    if (cardClass === 'offline') return 'Offline';
+
+    return 'Desconhecido';
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+loadStatus();
+setInterval(loadStatus, 3000);

@@ -1,0 +1,228 @@
+<?php
+
+header('Content-Type: application/json; charset=utf-8');
+
+require_once "/var/www/html/libs/misc.lib.php";
+
+function getAmiPassword()
+{
+    return obtenerClaveAMIAdmin("/var/www/html/");
+}
+
+function amiConnect()
+{
+    $host = "127.0.0.1";
+    $port = 5038;
+    $user = "admin";
+    $pass = getAmiPassword();
+
+    $fp = @fsockopen($host, $port, $errno, $errstr, 3);
+
+    if (!$fp) {
+        throw new Exception("Falha ao conectar no AMI: $errstr ($errno)");
+    }
+
+    stream_set_timeout($fp, 3);
+
+    fgets($fp);
+
+    amiSend($fp, [
+        "Action" => "Login",
+        "Username" => $user,
+        "Secret" => $pass,
+        "Events" => "off"
+    ]);
+
+    $response = amiReadResponse($fp, null, 3);
+
+    if (!isset($response[0]["Response"]) || $response[0]["Response"] !== "Success") {
+        fclose($fp);
+        throw new Exception("Falha no login AMI");
+    }
+
+    return $fp;
+}
+
+function amiSend($fp, array $params)
+{
+    foreach ($params as $key => $value) {
+        fwrite($fp, $key . ": " . $value . "\r\n");
+    }
+
+    fwrite($fp, "\r\n");
+}
+
+function amiReadResponse($fp, $completeEvent = null, $timeout = 5)
+{
+    $events = [];
+    $current = [];
+    $start = time();
+
+    while (!feof($fp)) {
+        $line = fgets($fp);
+
+        if ($line === false) {
+            if ((time() - $start) >= $timeout) break;
+            usleep(100000);
+            continue;
+        }
+
+        $line = rtrim($line, "\r\n");
+
+        if ($line === "") {
+            if (!empty($current)) {
+                $events[] = $current;
+
+                if ($completeEvent !== null && isset($current["Event"]) && $current["Event"] === $completeEvent) {
+                    break;
+                }
+
+                if ($completeEvent === null && isset($current["Response"])) {
+                    break;
+                }
+
+                $current = [];
+            }
+
+            continue;
+        }
+
+        $parts = explode(":", $line, 2);
+
+        if (count($parts) === 2) {
+            $current[trim($parts[0])] = trim($parts[1]);
+        }
+
+        if ((time() - $start) >= $timeout) {
+            break;
+        }
+    }
+
+    return $events;
+}
+
+function getPjsipEndpoints($fp)
+{
+    amiSend($fp, [
+        "Action" => "PJSIPShowEndpoints"
+    ]);
+
+    $events = amiReadResponse($fp, "EndpointListComplete", 5);
+
+    $endpoints = [];
+
+    foreach ($events as $event) {
+        if (($event["Event"] ?? "") !== "EndpointList") {
+            continue;
+        }
+
+        $ext = $event["ObjectName"] ?? null;
+
+        if (!$ext) {
+            continue;
+        }
+
+        if (!preg_match('/^[0-9]+$/', $ext)) {
+            continue;
+        }
+
+        $endpoints[$ext] = [
+            "extension" => $ext,
+            "device_state" => $event["DeviceState"] ?? "Unknown",
+            "active_channels" => $event["ActiveChannels"] ?? "0",
+            "contact_status" => "Unknown",
+            "via" => null,
+            "user_agent" => null,
+        ];
+    }
+
+    return $endpoints;
+}
+
+function getPjsipContacts($fp)
+{
+    amiSend($fp, [
+        "Action" => "PJSIPShowContacts"
+    ]);
+
+    $events = amiReadResponse($fp, "ContactListComplete", 5);
+
+    $contacts = [];
+
+    foreach ($events as $event) {
+        if (($event["Event"] ?? "") !== "ContactList") {
+            continue;
+        }
+
+        $endpoint = $event["Endpoint"] ?? null;
+
+        if (!$endpoint) {
+            continue;
+        }
+
+        if (!preg_match('/^[0-9]+$/', $endpoint)) {
+            continue;
+        }
+
+        $via = null;
+
+        if (!empty($event["ViaAddr"])) {
+            $via = $event["ViaAddr"];
+
+            if (!empty($event["ViaPort"])) {
+                $via .= ":" . $event["ViaPort"];
+            }
+        }
+
+        $contacts[$endpoint] = [
+            "contact_status" => $event["Status"] ?? "Unknown",
+            "via" => $via,
+            "user_agent" => $event["UserAgent"] ?? null,
+        ];
+    }
+
+    return $contacts;
+}
+
+try {
+    $fp = amiConnect();
+
+    $endpoints = getPjsipEndpoints($fp);
+    $contacts = getPjsipContacts($fp);
+
+    foreach ($contacts as $ext => $contact) {
+        if (!isset($endpoints[$ext])) {
+            $endpoints[$ext] = [
+                "extension" => $ext,
+                "device_state" => "Unknown",
+                "active_channels" => "0",
+                "contact_status" => "Unknown",
+                "via" => null,
+                "user_agent" => null,
+            ];
+        }
+
+        $endpoints[$ext]["contact_status"] = $contact["contact_status"];
+        $endpoints[$ext]["via"] = $contact["via"];
+        $endpoints[$ext]["user_agent"] = $contact["user_agent"];
+    }
+
+    ksort($endpoints, SORT_NATURAL);
+
+    amiSend($fp, [
+        "Action" => "Logoff"
+    ]);
+
+    fclose($fp);
+
+    echo json_encode([
+        "success" => true,
+        "extensions" => array_values($endpoints),
+    ]);
+
+} catch (Exception $e) {
+    echo json_encode([
+        "success" => false,
+        "error" => $e->getMessage(),
+    ]);
+}
