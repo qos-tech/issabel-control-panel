@@ -187,9 +187,9 @@
 }
 
 .queue-calls {
-    min-width: 42px;
-    width: 42px;
-    min-height: 34px;
+    min-width: 62px;
+    width: 62px;
+    min-height: 36px;
     background: #f0ad00;
     color: #fff;
     border-radius: 10px;
@@ -212,10 +212,11 @@
 .queue-calls-label {
     display: block;
     margin-top: 1px;
-    font-size: 8px;
-    line-height: 9px;
+    font-size: 7px;
+    line-height: 8px;
     font-weight: normal;
     white-space: nowrap;
+    text-align: center;
 }
 
 .queue-subtitle {

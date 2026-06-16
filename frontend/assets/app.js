@@ -165,7 +165,7 @@ function renderQueuesSection(queues) {
 
 function renderQueueCard(queue) {
     var queueId = queue && queue.queue ? queue.queue : '-';
-    var queueName = queue && queue.name && queue.name !== queueId ? queue.name : '';
+    var queueName = getQueueDisplayName(queue);
     var waiting = toInt(queue && queue.calls);
     var membersTotal = toInt(queue && queue.members_total);
     var membersAvailable = toInt(queue && queue.members_available);
@@ -201,10 +201,10 @@ function renderQueueCard(queue) {
         '<div class="queue-title">Fila ' + escapeHtml(queueId) + '</div>' +
         '<div class="queue-calls" title="Aguardando: ' + waiting + '">' +
         '<span class="queue-calls-number">' + waiting + '</span>' +
-        '<span class="queue-calls-label">aguard.</span>' +
+        '<span class="queue-calls-label">Aguardando</span>' +
         '</div>' +
         '</div>' +
-        '<div class="queue-subtitle">' + escapeHtml(queueName || 'Fila') + '</div>' +
+        '<div class="queue-subtitle">' + escapeHtml(queueName) + '</div>' +
         '<div class="queue-times">' +
         '<span class="queue-time-chip">TME: ' + escapeHtml(queue && queue.tme_label ? queue.tme_label : '00:00') + '</span>' +
         '<span class="queue-time-chip">TMA: ' + escapeHtml(queue && queue.tma_label ? queue.tma_label : '00:00') + '</span>' +
@@ -218,6 +218,19 @@ function renderQueueCard(queue) {
         (entryList !== '' ? '<div class="queue-entries">' + entryList + '</div>' : '') +
         '<div class="queue-members">' + memberList + '</div>' +
         '</div>';
+}
+
+function getQueueDisplayName(queue) {
+    var queueId = queue && queue.queue ? String(queue.queue) : '';
+    var queueName = queue && queue.name ? String(queue.name) : '';
+
+    queueName = queueName.replace(/^\s+|\s+$/g, '');
+
+    if (queueName !== '' && queueName !== queueId) {
+        return queueName;
+    }
+
+    return 'Fila';
 }
 
 function renderQueueEntry(entry) {
