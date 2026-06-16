@@ -111,6 +111,35 @@ class DevicesRepository
         );
     }
 
+    public function loadQueueNames()
+    {
+        $db = $this->connect();
+        $queues = array();
+        $res = $db->query('
+            SELECT extension, descr
+            FROM queues_config
+        ');
+
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $extension = trim(isset($row['extension']) ? $row['extension'] : '');
+                $description = trim(isset($row['descr']) ? $row['descr'] : '');
+
+                if ($extension === '') {
+                    continue;
+                }
+
+                if ($description !== '') {
+                    $queues[$extension] = $description;
+                }
+            }
+        }
+
+        $db->close();
+
+        return $queues;
+    }
+
     private function connect()
     {
         $dbConfig = $this->config->getDatabaseConfig();

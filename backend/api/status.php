@@ -32,6 +32,7 @@ try {
     $maps = $repository->loadDeviceMaps();
     $extensionsMap = isset($maps[0]) ? $maps[0] : array();
     $trunksMap = isset($maps[1]) ? $maps[1] : array();
+    $queueNames = $repository->loadQueueNames();
 
     $ami = new AmiClient(
         $config->getAmiHost(),
@@ -49,7 +50,7 @@ try {
     $channels->applyActiveChannels($items, $activeChannels);
 
     $split = $trunksService->splitItems($items);
-    $queues = $queuesService->collectQueues($ami, $activeChannels);
+    $queues = $queuesService->collectQueues($ami, $activeChannels, $queueNames);
 
     $extensions = isset($split['extensions']) ? $split['extensions'] : array();
     $trunks = isset($split['trunks']) ? $split['trunks'] : array();

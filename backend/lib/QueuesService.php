@@ -9,7 +9,7 @@ class QueuesService
         $this->memberDisplayNames = array();
     }
 
-    public function collectQueues($ami, $activeChannels)
+    public function collectQueues($ami, $activeChannels, $queueNames)
     {
         try {
             $ami->send(array('Action' => 'QueueStatus'));
@@ -32,11 +32,11 @@ class QueuesService
                 }
 
                 if (!isset($queues[$queueId])) {
-                    $queues[$queueId] = $this->createQueue($event);
+                    $queues[$queueId] = $this->createQueue($event, $queueNames);
                 } else {
                     $holdtime = $this->toInt($this->readFirst($event, array('Holdtime'), $queues[$queueId]['holdtime']));
                     $talktime = $this->toInt($this->readFirst($event, array('TalkTime'), $queues[$queueId]['talktime']));
-                    $queues[$queueId]['name'] = $this->readFirst($event, array('QueueName', 'Queue'), $queues[$queueId]['name']);
+                    $queues[$queueId]['name'] = $this->resolveQueueName($queueId, $event, $queueNames, $queues[$queueId]['name']);
                     $queues[$queueId]['strategy'] = $this->readFirst($event, array('Strategy'), $queues[$queueId]['strategy']);
                     $queues[$queueId]['calls'] = $this->readFirst($event, array('Calls'), $queues[$queueId]['calls']);
                     $queues[$queueId]['holdtime'] = $this->readFirst($event, array('Holdtime'), $queues[$queueId]['holdtime']);
@@ -58,7 +58,7 @@ class QueuesService
                 }
 
                 if (!isset($queues[$queueId])) {
-                    $queues[$queueId] = $this->createQueue(array('Queue' => $queueId));
+                    $queues[$queueId] = $this->createQueue(array('Queue' => $queueId), $queueNames);
                 }
 
                 $member = $this->createMember($event, $ami, $activeChannels);
@@ -80,7 +80,7 @@ class QueuesService
                 }
 
                 if (!isset($queues[$queueId])) {
-                    $queues[$queueId] = $this->createQueue(array('Queue' => $queueId));
+                    $queues[$queueId] = $this->createQueue(array('Queue' => $queueId), $queueNames);
                 }
 
                 $queues[$queueId]['entries'][] = $this->createEntry($event);
@@ -101,16 +101,12 @@ class QueuesService
         return strnatcasecmp($left, $right);
     }
 
-    private function createQueue($event)
+    private function createQueue($event, $queueNames)
     {
         $queueId = isset($event['Queue']) ? $event['Queue'] : '';
-        $name = isset($event['Queue']) ? $event['Queue'] : '';
         $holdtime = $this->toInt($this->readFirst($event, array('Holdtime'), '0'));
         $talktime = $this->toInt($this->readFirst($event, array('TalkTime'), '0'));
-
-        if (isset($event['QueueName']) && trim($event['QueueName']) !== '') {
-            $name = trim($event['QueueName']);
-        }
+        $name = $this->resolveQueueName($queueId, $event, $queueNames, $queueId);
 
         return array(
             'queue' => $queueId,
@@ -218,6 +214,23 @@ class QueuesService
     private function shouldIgnoreQueue($queueId, $queueName)
     {
         return strtolower(trim($queueId)) === 'default' || strtolower(trim($queueName)) === 'default';
+    }
+
+    private function resolveQueueName($queueId, $event, $queueNames, $fallbackName)
+    {
+        $queueId = trim((string)$queueId);
+
+        if ($queueId !== '' && isset($queueNames[$queueId]) && trim($queueNames[$queueId]) !== '') {
+            return trim($queueNames[$queueId]);
+        }
+
+        $queueName = $this->readFirst($event, array('QueueName', 'Queue'), '');
+
+        if ($queueName !== '') {
+            return $queueName;
+        }
+
+        return $fallbackName;
     }
 
     private function extractExtension($location)
