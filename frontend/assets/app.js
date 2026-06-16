@@ -1,4 +1,12 @@
+var statusRequestInFlight = false;
+
 function loadStatus() {
+    if (statusRequestInFlight) {
+        return;
+    }
+
+    statusRequestInFlight = true;
+
     var grid = document.getElementById('extensions-grid');
     var lastUpdate = document.getElementById('last-update');
     var summary = document.getElementById('summary');
@@ -26,6 +34,9 @@ function loadStatus() {
         })
         .catch(function (error) {
             grid.innerHTML = '<div class="loading">Erro ao carregar painel: ' + escapeHtml(error.message) + '</div>';
+        })
+        .then(function () {
+            statusRequestInFlight = false;
         });
 }
 
@@ -33,7 +44,9 @@ function renderPanel(data, grid, summary, lastUpdate) {
     var extensions = ensureArray(data.extensions);
     var trunks = ensureArray(data.trunks);
     var unknown = ensureArray(data.unknown);
-    var queues = ensureArray(data.queues);
+    var queues = ensureArray(data.queues).filter(function (queue) {
+        return !isDefaultQueue(queue);
+    });
 
     var totalExtensions = extensions.length;
     var online = countByStatus(extensions, 'online');
@@ -54,6 +67,7 @@ function renderPanel(data, grid, summary, lastUpdate) {
 
     var html = '';
 
+    html += renderQueuesSection(queues);
     html += renderSection('Ramais', extensions);
 
     if (trunks.length > 0) {
@@ -63,8 +77,6 @@ function renderPanel(data, grid, summary, lastUpdate) {
     if (unknown.length > 0) {
         html += renderSection('Desconhecidos', unknown);
     }
-
-    html += renderQueuesSection(queues);
 
     if (html === '') {
         html = '<div class="loading">Nenhum dispositivo encontrado.</div>';
@@ -196,12 +208,13 @@ function renderQueueCard(queue) {
 }
 
 function renderQueueMember(member) {
-    var name = member && member.name ? member.name : (member && member.location ? member.location : '-');
+    var name = getQueueMemberLabel(member);
     var status = member && member.status ? member.status : 'Desconhecido';
     var statusClass = getQueueMemberClass(member);
     var titleParts = [
         'Membro: ' + name,
         member && member.location ? 'Local: ' + member.location : '',
+        member && member.extension ? 'Ramal: ' + member.extension : '',
         member && member.membership ? 'Tipo: ' + member.membership : '',
         'Status: ' + status,
         'Penalty: ' + (member && member.penalty ? member.penalty : '0'),
@@ -214,6 +227,22 @@ function renderQueueMember(member) {
         '<span class="queue-member ' + escapeHtml(statusClass) + '" title="' + escapeHtml(titleParts.join(' | ')) + '">' +
             escapeHtml(name) +
         '</span>';
+}
+
+function getQueueMemberLabel(member) {
+    if (member && member.display_name) {
+        return member.display_name;
+    }
+
+    if (member && member.extension) {
+        return member.extension;
+    }
+
+    if (member && member.location) {
+        return member.location;
+    }
+
+    return '-';
 }
 
 function getQueueMemberClass(member) {
@@ -325,6 +354,13 @@ function ensureArray(value) {
     return Array.isArray(value) ? value : [];
 }
 
+function isDefaultQueue(queue) {
+    var queueId = String(queue && queue.queue ? queue.queue : '').toLowerCase();
+    var queueName = String(queue && queue.name ? queue.name : '').toLowerCase();
+
+    return queueId === 'default' || queueName === 'default';
+}
+
 function toInt(value) {
     var parsed = parseInt(value, 10);
 
@@ -341,4 +377,4 @@ function escapeHtml(value) {
 }
 
 loadStatus();
-setInterval(loadStatus, 3000);
+setInterval(loadStatus, 2000);

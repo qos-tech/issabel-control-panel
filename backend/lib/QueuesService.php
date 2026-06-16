@@ -2,6 +2,13 @@
 
 class QueuesService
 {
+    private $memberDisplayNames;
+
+    public function __construct()
+    {
+        $this->memberDisplayNames = array();
+    }
+
     public function collectQueues($ami)
     {
         try {
@@ -18,8 +25,9 @@ class QueuesService
 
             if ($eventName === 'QueueParams') {
                 $queueId = isset($event['Queue']) ? $event['Queue'] : '';
+                $queueName = $this->readFirst($event, array('QueueName', 'Queue'), '');
 
-                if ($queueId === '') {
+                if ($queueId === '' || $this->shouldIgnoreQueue($queueId, $queueName)) {
                     continue;
                 }
 
@@ -36,7 +44,7 @@ class QueuesService
             } elseif ($eventName === 'QueueMember') {
                 $queueId = isset($event['Queue']) ? $event['Queue'] : '';
 
-                if ($queueId === '') {
+                if ($queueId === '' || $this->shouldIgnoreQueue($queueId, $queueId)) {
                     continue;
                 }
 
@@ -44,7 +52,7 @@ class QueuesService
                     $queues[$queueId] = $this->createQueue(array('Queue' => $queueId));
                 }
 
-                $member = $this->createMember($event);
+                $member = $this->createMember($event, $ami);
                 $queues[$queueId]['members'][] = $member;
                 $queues[$queueId]['members_total']++;
 
@@ -58,7 +66,7 @@ class QueuesService
             } elseif ($eventName === 'QueueEntry') {
                 $queueId = isset($event['Queue']) ? $event['Queue'] : '';
 
-                if ($queueId === '') {
+                if ($queueId === '' || $this->shouldIgnoreQueue($queueId, $queueId)) {
                     continue;
                 }
 
@@ -110,20 +118,29 @@ class QueuesService
         );
     }
 
-    private function createMember($event)
+    private function createMember($event, $ami)
     {
         $paused = isset($event['Paused']) ? (string)$event['Paused'] : '0';
         $inCall = isset($event['InCall']) ? (string)$event['InCall'] : '0';
         $statusCode = isset($event['Status']) ? (string)$event['Status'] : '0';
+        $location = $this->readFirst($event, array('Location', 'Interface'), '');
+        $extension = $this->extractExtension($location);
+        $displayName = '';
+
+        if ($extension !== '') {
+            $displayName = $this->getMemberDisplayName($ami, $extension);
+        }
 
         return array(
             'name' => $this->readFirst($event, array('Name', 'MemberName', 'Member'), ''),
-            'location' => $this->readFirst($event, array('Location', 'Interface'), ''),
+            'location' => $location,
             'membership' => $this->readFirst($event, array('Membership', 'MembershipType'), ''),
             'penalty' => $this->readFirst($event, array('Penalty'), '0'),
             'calls_taken' => $this->readFirst($event, array('CallsTaken', 'Calls'), '0'),
             'last_call' => $this->readFirst($event, array('LastCall'), '0'),
             'last_pause' => $this->readFirst($event, array('LastPause'), '0'),
+            'extension' => $extension,
+            'display_name' => $displayName,
             'paused' => $paused,
             'in_call' => $inCall,
             'status_code' => $statusCode,
@@ -175,5 +192,72 @@ class QueuesService
         }
 
         return $defaultValue;
+    }
+
+    private function shouldIgnoreQueue($queueId, $queueName)
+    {
+        return strtolower(trim($queueId)) === 'default' || strtolower(trim($queueName)) === 'default';
+    }
+
+    private function extractExtension($location)
+    {
+        $location = trim((string)$location);
+
+        if ($location === '') {
+            return '';
+        }
+
+        if (preg_match('/^Local\/([0-9]+)@/i', $location, $matches)) {
+            return $matches[1];
+        }
+
+        if (preg_match('/^(PJSIP|SIP|IAX2)\/([0-9]+)/i', $location, $matches)) {
+            return $matches[2];
+        }
+
+        return '';
+    }
+
+    private function getMemberDisplayName($ami, $extension)
+    {
+        if (isset($this->memberDisplayNames[$extension])) {
+            return $this->memberDisplayNames[$extension];
+        }
+
+        $displayName = '';
+
+        try {
+            $lines = $ami->command('database get AMPUSER/' . $extension . ' cidname', 2);
+            $cidName = $this->parseDatabaseGetValue($lines);
+
+            if ($cidName !== '') {
+                $displayName = 'Ramal ' . $extension . ' - ' . $cidName;
+            } else {
+                $displayName = $extension;
+            }
+        } catch (Exception $e) {
+            $displayName = $extension;
+        }
+
+        $this->memberDisplayNames[$extension] = $displayName;
+
+        return $displayName;
+    }
+
+    private function parseDatabaseGetValue($lines)
+    {
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if ($line === '' || stripos($line, 'database entry not found') !== false) {
+                continue;
+            }
+
+            if (preg_match('/^Value:[[:space:]]*(.+)$/i', $line, $matches)) {
+                return trim($matches[1]);
+            }
+        }
+
+        return '';
     }
 }

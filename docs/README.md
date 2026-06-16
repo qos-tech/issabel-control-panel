@@ -2,6 +2,9 @@
 
 Mini projeto do modulo `control_panel` para Issabel/FreePBX, mantendo o endpoint atual e adicionando monitoramento de filas via AMI `QueueStatus`.
 
+- A fila `default` e ignorada no backend e no frontend
+- Membros de fila sao exibidos preferencialmente pelo `CallerID Name` do ramal, via `AMPUSER/<ramal>/cidname`
+
 ## Compatibilidade
 
 - PHP antigo do Issabel, com foco em PHP 5.6/7.0+
@@ -70,6 +73,11 @@ Depois validar se o endpoint retorna a chave `queues`:
 ```bash
 curl -s http://127.0.0.1/modules/control_panel/api/status.php | python -m json.tool
 ```
+
+Observacoes:
+
+- a fila `default` nao deve aparecer no JSON nem no painel
+- membros devem aparecer como `Ramal 20 - Nome`, com fallback para o numero do ramal
 
 ## Desinstalacao
 
