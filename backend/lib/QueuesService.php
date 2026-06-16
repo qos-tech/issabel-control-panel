@@ -229,12 +229,7 @@ class QueuesService
         try {
             $lines = $ami->command('database get AMPUSER/' . $extension . ' cidname', 2);
             $cidName = $this->parseDatabaseGetValue($lines);
-
-            if ($cidName !== '') {
-                $displayName = 'Ramal ' . $extension . ' - ' . $cidName;
-            } else {
-                $displayName = $extension;
-            }
+            $displayName = $this->cleanMemberDisplayName($extension, $cidName);
         } catch (Exception $e) {
             $displayName = $extension;
         }
@@ -259,5 +254,25 @@ class QueuesService
         }
 
         return '';
+    }
+
+    private function cleanMemberDisplayName($extension, $cidName)
+    {
+        $extension = trim((string)$extension);
+        $cidName = trim((string)$cidName);
+
+        if ($cidName === '') {
+            return $extension;
+        }
+
+        $pattern = '/^Ramal[[:space:]]+' . preg_quote($extension, '/') . '[[:space:]]*-[[:space:]]*/i';
+        $cleanName = preg_replace($pattern, '', $cidName);
+        $cleanName = trim(preg_replace('/[[:space:]]+/', ' ', $cleanName));
+
+        if ($cleanName !== '') {
+            return $cleanName;
+        }
+
+        return $extension;
     }
 }

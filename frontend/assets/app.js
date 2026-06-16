@@ -193,15 +193,15 @@ function renderQueueCard(queue) {
     return '' +
         '<div class="queue-card" title="' + escapeHtml(titleParts.join(' | ')) + '">' +
             '<div class="queue-card-header">' +
-                '<div class="queue-title">' + escapeHtml(queueId) + '</div>' +
-                '<div class="queue-calls">' + waiting + '</div>' +
+                '<div class="queue-title">Fila ' + escapeHtml(queueId) + '</div>' +
+                '<div class="queue-calls">Aguardando: ' + waiting + '</div>' +
             '</div>' +
             '<div class="queue-subtitle">' + escapeHtml(queueName || 'Fila') + '</div>' +
             '<div class="queue-stats">' +
-                '<span>Logados ' + membersTotal + '</span>' +
-                '<span>Livres ' + membersAvailable + '</span>' +
-                '<span>Ocup. ' + membersBusy + '</span>' +
-                '<span>Paus. ' + membersPaused + '</span>' +
+                '<span>Logados: ' + membersTotal + '</span>' +
+                '<span>Livres: ' + membersAvailable + '</span>' +
+                '<span>Ocupados: ' + membersBusy + '</span>' +
+                '<span>Pausados: ' + membersPaused + '</span>' +
             '</div>' +
             '<div class="queue-members">' + memberList + '</div>' +
         '</div>';
@@ -215,10 +215,9 @@ function renderQueueMember(member) {
         'Membro: ' + name,
         member && member.location ? 'Local: ' + member.location : '',
         member && member.extension ? 'Ramal: ' + member.extension : '',
-        member && member.membership ? 'Tipo: ' + member.membership : '',
         'Status: ' + status,
-        'Penalty: ' + (member && member.penalty ? member.penalty : '0'),
-        'Atendidas: ' + (member && member.calls_taken ? member.calls_taken : '0')
+        'Atendidas: ' + (member && member.calls_taken ? member.calls_taken : '0'),
+        'Ultima chamada: ' + (member && member.last_call ? member.last_call : '0')
     ].filter(function (part) {
         return !!part;
     });
