@@ -97,8 +97,8 @@ function renderSection(title, items) {
 
     return '' +
         '<div class="device-section">' +
-            '<h3>' + escapeHtml(title) + '</h3>' +
-            '<div class="device-grid">' + cards + '</div>' +
+        '<h3>' + escapeHtml(title) + '</h3>' +
+        '<div class="device-grid">' + cards + '</div>' +
         '</div>';
 }
 
@@ -142,8 +142,8 @@ function renderCard(item) {
 
     return '' +
         '<div class="extension-card ' + escapeHtml(cardClass) + '" title="' + escapeHtml(titleParts.join(' | ')) + '">' +
-            '<div class="extension-number">' + escapeHtml(name) + '</div>' +
-            '<div class="extension-label">' + escapeHtml(label) + '</div>' +
+        '<div class="extension-number">' + escapeHtml(name) + '</div>' +
+        '<div class="extension-label">' + escapeHtml(label) + '</div>' +
         '</div>';
 }
 
@@ -158,8 +158,8 @@ function renderQueuesSection(queues) {
 
     return '' +
         '<div class="device-section queue-section">' +
-            '<h3>Filas</h3>' +
-            '<div class="queue-grid">' + cards + '</div>' +
+        '<h3>Filas</h3>' +
+        '<div class="queue-grid">' + cards + '</div>' +
         '</div>';
 }
 
@@ -176,11 +176,16 @@ function renderQueueCard(queue) {
     var memberList = members.map(function (member) {
         return renderQueueMember(member);
     }).join('');
+    var entryList = entries.map(function (entry) {
+        return renderQueueEntry(entry);
+    }).join('');
     var titleParts = [
         'Fila: ' + queueId,
         queueName ? 'Nome: ' + queueName : '',
         'Estrategia: ' + (queue && queue.strategy ? queue.strategy : ''),
         'Chamadas aguardando: ' + waiting,
+        'TME: ' + (queue && queue.tme_label ? queue.tme_label : '00:00'),
+        'TMA: ' + (queue && queue.tma_label ? queue.tma_label : '00:00'),
         'Membros logados: ' + membersTotal,
         'Livres: ' + membersAvailable,
         'Ocupados: ' + membersBusy,
@@ -192,21 +197,38 @@ function renderQueueCard(queue) {
 
     return '' +
         '<div class="queue-card" title="' + escapeHtml(titleParts.join(' | ')) + '">' +
-            '<div class="queue-card-header">' +
-                '<div class="queue-title">Fila ' + escapeHtml(queueId) + '</div>' +
-                '<div class="queue-calls" title="Aguardando: ' + waiting + '">' +
-                    '<span class="queue-calls-number">' + waiting + '</span>' +
-                    '<span class="queue-calls-label">aguard.</span>' +
-                '</div>' +
-            '</div>' +
-            '<div class="queue-subtitle">' + escapeHtml(queueName || 'Fila') + '</div>' +
-            '<div class="queue-stats">' +
-                '<span>Logados: ' + membersTotal + '</span>' +
-                '<span>Livres: ' + membersAvailable + '</span>' +
-                '<span>Ocupados: ' + membersBusy + '</span>' +
-                '<span>Pausados: ' + membersPaused + '</span>' +
-            '</div>' +
-            '<div class="queue-members">' + memberList + '</div>' +
+        '<div class="queue-card-header">' +
+        '<div class="queue-title">Fila ' + escapeHtml(queueId) + '</div>' +
+        '<div class="queue-calls" title="Aguardando: ' + waiting + '">' +
+        '<span class="queue-calls-number">' + waiting + '</span>' +
+        '<span class="queue-calls-label">aguard.</span>' +
+        '</div>' +
+        '</div>' +
+        '<div class="queue-subtitle">' + escapeHtml(queueName || 'Fila') + '</div>' +
+        '<div class="queue-times">' +
+        '<span class="queue-time-chip">TME: ' + escapeHtml(queue && queue.tme_label ? queue.tme_label : '00:00') + '</span>' +
+        '<span class="queue-time-chip">TMA: ' + escapeHtml(queue && queue.tma_label ? queue.tma_label : '00:00') + '</span>' +
+        '</div>' +
+        '<div class="queue-stats">' +
+        '<span>Logados: ' + membersTotal + '</span>' +
+        '<span>Livres: ' + membersAvailable + '</span>' +
+        '<span>Ocupados: ' + membersBusy + '</span>' +
+        '<span>Pausados: ' + membersPaused + '</span>' +
+        '</div>' +
+        (entryList !== '' ? '<div class="queue-entries">' + entryList + '</div>' : '') +
+        '<div class="queue-members">' + memberList + '</div>' +
+        '</div>';
+}
+
+function renderQueueEntry(entry) {
+    var position = entry && entry.position ? entry.position : '0';
+    var caller = getQueueEntryCaller(entry);
+    var waitLabel = entry && entry.wait_label ? entry.wait_label : '00:00';
+
+    return '' +
+        '<div class="queue-entry" title="' + escapeHtml('Posicao: ' + position + ' | Cliente: ' + caller + ' | Espera: ' + waitLabel) + '">' +
+        '<span class="queue-entry-label">' + escapeHtml(position + '. ' + caller) + '</span>' +
+        '<span class="queue-entry-wait">' + escapeHtml(waitLabel) + '</span>' +
         '</div>';
 }
 
@@ -214,11 +236,17 @@ function renderQueueMember(member) {
     var name = getQueueMemberLabel(member);
     var status = member && member.status ? member.status : 'Desconhecido';
     var statusClass = getQueueMemberClass(member);
+    var statusLabel = status;
+
+    if (status === 'Em chamada' && member && member.active_call_label) {
+        statusLabel += ' ' + member.active_call_label;
+    }
+
     var titleParts = [
         'Membro: ' + name,
         member && member.location ? 'Local: ' + member.location : '',
         member && member.extension ? 'Ramal: ' + member.extension : '',
-        'Status: ' + status,
+        'Status: ' + statusLabel,
         'Atendidas: ' + (member && member.calls_taken ? member.calls_taken : '0'),
         'Ultima chamada: ' + (member && member.last_call ? member.last_call : '0')
     ].filter(function (part) {
@@ -227,8 +255,25 @@ function renderQueueMember(member) {
 
     return '' +
         '<span class="queue-member ' + escapeHtml(statusClass) + '" title="' + escapeHtml(titleParts.join(' | ')) + '">' +
-            escapeHtml(name) +
+        '<span class="queue-member-name">' + escapeHtml(name) + '</span>' +
+        ((member && member.active_call_label && (member.in_call === '1' || member.status === 'Em chamada')) ? '<span class="member-call-time">' + escapeHtml(member.active_call_label) + '</span>' : '') +
         '</span>';
+}
+
+function getQueueEntryCaller(entry) {
+    if (entry && entry.callerid_name) {
+        return entry.callerid_name;
+    }
+
+    if (entry && entry.callerid_num) {
+        return entry.callerid_num;
+    }
+
+    if (entry && entry.channel) {
+        return entry.channel;
+    }
+
+    return 'Sem identificacao';
 }
 
 function getQueueMemberLabel(member) {

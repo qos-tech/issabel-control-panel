@@ -152,11 +152,20 @@ class ChannelsService
                     'exten' => $channelInfo['exten'],
                     'context' => $channelInfo['context'],
                     'application' => $channelInfo['application'],
-                    'application_data' => $channelInfo['application_data']
+                    'application_data' => $channelInfo['application_data'],
+                    'duration' => $channelInfo['duration'],
+                    'duration_seconds' => $this->parseDurationToSeconds($channelInfo['duration'])
                 );
             }
 
             $active[$name]['channels']++;
+
+            $candidateDuration = $this->parseDurationToSeconds($channelInfo['duration']);
+
+            if ($candidateDuration > $active[$name]['duration_seconds']) {
+                $active[$name]['duration'] = $channelInfo['duration'];
+                $active[$name]['duration_seconds'] = $candidateDuration;
+            }
         }
 
         return $active;
@@ -234,5 +243,28 @@ class ChannelsService
         $value = $this->normalizeNumberOnly($value);
 
         return $value !== '' && isset($extensionsMap[$value]);
+    }
+
+    private function parseDurationToSeconds($duration)
+    {
+        $duration = trim((string)$duration);
+
+        if ($duration === '') {
+            return 0;
+        }
+
+        if (ctype_digit($duration)) {
+            return (int)$duration;
+        }
+
+        if (preg_match('/^([0-9]+):([0-9]{2}):([0-9]{2})$/', $duration, $matches)) {
+            return ((int)$matches[1] * 3600) + ((int)$matches[2] * 60) + (int)$matches[3];
+        }
+
+        if (preg_match('/^([0-9]+):([0-9]{2})$/', $duration, $matches)) {
+            return ((int)$matches[1] * 60) + (int)$matches[2];
+        }
+
+        return 0;
     }
 }

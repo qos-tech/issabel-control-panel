@@ -49,7 +49,7 @@ try {
     $channels->applyActiveChannels($items, $activeChannels);
 
     $split = $trunksService->splitItems($items);
-    $queues = $queuesService->collectQueues($ami);
+    $queues = $queuesService->collectQueues($ami, $activeChannels);
 
     $extensions = isset($split['extensions']) ? $split['extensions'] : array();
     $trunks = isset($split['trunks']) ? $split['trunks'] : array();

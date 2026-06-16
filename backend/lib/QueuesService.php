@@ -9,7 +9,7 @@ class QueuesService
         $this->memberDisplayNames = array();
     }
 
-    public function collectQueues($ami)
+    public function collectQueues($ami, $activeChannels)
     {
         try {
             $ami->send(array('Action' => 'QueueStatus'));
@@ -34,10 +34,19 @@ class QueuesService
                 if (!isset($queues[$queueId])) {
                     $queues[$queueId] = $this->createQueue($event);
                 } else {
+                    $holdtime = $this->toInt($this->readFirst($event, array('Holdtime'), $queues[$queueId]['holdtime']));
+                    $talktime = $this->toInt($this->readFirst($event, array('TalkTime'), $queues[$queueId]['talktime']));
                     $queues[$queueId]['name'] = $this->readFirst($event, array('QueueName', 'Queue'), $queues[$queueId]['name']);
                     $queues[$queueId]['strategy'] = $this->readFirst($event, array('Strategy'), $queues[$queueId]['strategy']);
                     $queues[$queueId]['calls'] = $this->readFirst($event, array('Calls'), $queues[$queueId]['calls']);
                     $queues[$queueId]['holdtime'] = $this->readFirst($event, array('Holdtime'), $queues[$queueId]['holdtime']);
+                    $queues[$queueId]['talktime'] = $this->readFirst($event, array('TalkTime'), $queues[$queueId]['talktime']);
+                    $queues[$queueId]['service_level'] = $this->readFirst($event, array('ServiceLevel'), $queues[$queueId]['service_level']);
+                    $queues[$queueId]['service_level_perf'] = $this->readFirst($event, array('ServicelevelPerf', 'ServiceLevelPerf'), $queues[$queueId]['service_level_perf']);
+                    $queues[$queueId]['tme_seconds'] = $holdtime;
+                    $queues[$queueId]['tma_seconds'] = $talktime;
+                    $queues[$queueId]['tme_label'] = $this->formatSeconds($holdtime);
+                    $queues[$queueId]['tma_label'] = $this->formatSeconds($talktime);
                     $queues[$queueId]['completed'] = $this->readFirst($event, array('Completed'), $queues[$queueId]['completed']);
                     $queues[$queueId]['abandoned'] = $this->readFirst($event, array('Abandoned'), $queues[$queueId]['abandoned']);
                 }
@@ -52,7 +61,7 @@ class QueuesService
                     $queues[$queueId] = $this->createQueue(array('Queue' => $queueId));
                 }
 
-                $member = $this->createMember($event, $ami);
+                $member = $this->createMember($event, $ami, $activeChannels);
                 $queues[$queueId]['members'][] = $member;
                 $queues[$queueId]['members_total']++;
 
@@ -96,6 +105,8 @@ class QueuesService
     {
         $queueId = isset($event['Queue']) ? $event['Queue'] : '';
         $name = isset($event['Queue']) ? $event['Queue'] : '';
+        $holdtime = $this->toInt($this->readFirst($event, array('Holdtime'), '0'));
+        $talktime = $this->toInt($this->readFirst($event, array('TalkTime'), '0'));
 
         if (isset($event['QueueName']) && trim($event['QueueName']) !== '') {
             $name = trim($event['QueueName']);
@@ -107,6 +118,13 @@ class QueuesService
             'strategy' => isset($event['Strategy']) ? $event['Strategy'] : '',
             'calls' => isset($event['Calls']) ? (string)$event['Calls'] : '0',
             'holdtime' => isset($event['Holdtime']) ? (string)$event['Holdtime'] : '0',
+            'talktime' => isset($event['TalkTime']) ? (string)$event['TalkTime'] : '0',
+            'service_level' => isset($event['ServiceLevel']) ? (string)$event['ServiceLevel'] : '0',
+            'service_level_perf' => $this->readFirst($event, array('ServicelevelPerf', 'ServiceLevelPerf'), '0'),
+            'tme_seconds' => $holdtime,
+            'tma_seconds' => $talktime,
+            'tme_label' => $this->formatSeconds($holdtime),
+            'tma_label' => $this->formatSeconds($talktime),
             'completed' => isset($event['Completed']) ? (string)$event['Completed'] : '0',
             'abandoned' => isset($event['Abandoned']) ? (string)$event['Abandoned'] : '0',
             'members_total' => 0,
@@ -118,7 +136,7 @@ class QueuesService
         );
     }
 
-    private function createMember($event, $ami)
+    private function createMember($event, $ami, $activeChannels)
     {
         $paused = isset($event['Paused']) ? (string)$event['Paused'] : '0';
         $inCall = isset($event['InCall']) ? (string)$event['InCall'] : '0';
@@ -126,6 +144,7 @@ class QueuesService
         $location = $this->readFirst($event, array('Location', 'Interface'), '');
         $extension = $this->extractExtension($location);
         $displayName = $this->getMemberDisplayName($ami, $extension, $location);
+        $activeCallSeconds = $this->getActiveCallSeconds($extension, $activeChannels);
 
         return array(
             'name' => $this->readFirst($event, array('Name', 'MemberName', 'Member'), ''),
@@ -137,6 +156,8 @@ class QueuesService
             'last_pause' => $this->readFirst($event, array('LastPause'), '0'),
             'extension' => $extension,
             'display_name' => $displayName,
+            'active_call_seconds' => $activeCallSeconds,
+            'active_call_label' => $activeCallSeconds > 0 ? $this->formatSeconds($activeCallSeconds) : '',
             'paused' => $paused,
             'in_call' => $inCall,
             'status_code' => $statusCode,
@@ -146,12 +167,16 @@ class QueuesService
 
     private function createEntry($event)
     {
+        $waitSeconds = $this->toInt($this->readFirst($event, array('Wait'), '0'));
+
         return array(
             'position' => $this->readFirst($event, array('Position'), '0'),
             'channel' => $this->readFirst($event, array('Channel'), ''),
             'callerid_num' => $this->readFirst($event, array('CallerIDNum'), ''),
             'callerid_name' => $this->readFirst($event, array('CallerIDName'), ''),
-            'wait' => $this->readFirst($event, array('Wait'), '0')
+            'wait' => $this->readFirst($event, array('Wait'), '0'),
+            'wait_seconds' => $waitSeconds,
+            'wait_label' => $this->formatSeconds($waitSeconds)
         );
     }
 
@@ -281,5 +306,44 @@ class QueuesService
         }
 
         return $cidName !== '' ? $cidName : $location;
+    }
+
+    private function getActiveCallSeconds($extension, $activeChannels)
+    {
+        if ($extension === '' || !isset($activeChannels[$extension])) {
+            return 0;
+        }
+
+        $channel = $activeChannels[$extension];
+
+        if (isset($channel['duration_seconds'])) {
+            return (int)$channel['duration_seconds'];
+        }
+
+        return 0;
+    }
+
+    private function toInt($value)
+    {
+        return (int)trim((string)$value);
+    }
+
+    private function formatSeconds($seconds)
+    {
+        $seconds = (int)$seconds;
+
+        if ($seconds < 0) {
+            $seconds = 0;
+        }
+
+        $hours = (int)floor($seconds / 3600);
+        $minutes = (int)floor(($seconds % 3600) / 60);
+        $remainingSeconds = $seconds % 60;
+
+        if ($hours > 0) {
+            return sprintf('%02d:%02d:%02d', $hours, $minutes, $remainingSeconds);
+        }
+
+        return sprintf('%02d:%02d', $minutes, $remainingSeconds);
     }
 }

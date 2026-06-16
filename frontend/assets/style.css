@@ -228,6 +228,22 @@
     text-overflow: ellipsis;
 }
 
+.queue-times {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.queue-time-chip {
+    background: #eef4fb;
+    border: 1px solid #d7e5f5;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: #36506a;
+}
+
 .queue-stats {
     display: flex;
     flex-wrap: wrap;
@@ -244,6 +260,39 @@
     color: #555;
 }
 
+.queue-entries {
+    margin-top: 7px;
+    border-top: 1px dashed #e1e3e6;
+    padding-top: 6px;
+}
+
+.queue-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10px;
+    line-height: 12px;
+    color: #4c5560;
+}
+
+.queue-entry + .queue-entry {
+    margin-top: 3px;
+}
+
+.queue-entry-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.queue-entry-wait {
+    flex-shrink: 0;
+    font-weight: bold;
+    color: #2f2f2f;
+}
+
 .queue-members {
     display: flex;
     flex-wrap: wrap;
@@ -252,7 +301,9 @@
 }
 
 .queue-member {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     max-width: 100%;
     border-radius: 10px;
     padding: 2px 6px;
@@ -262,6 +313,19 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.queue-member-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.member-call-time {
+    flex-shrink: 0;
+    font-size: 9px;
+    line-height: 10px;
+    opacity: 0.95;
 }
 
 .queue-member.online {
