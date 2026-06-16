@@ -1,68 +1,148 @@
 # Issabel Operator Panel
 
-Mini projeto para evoluir o módulo `control_panel` do Issabel.
+Painel custom para Issabel/FreePBX que monitora ramais, troncos, chamadas ativas e filas via AMI, com foco em compatibilidade com o Issabel antigo.
 
-Objetivo inicial:
+## Features
 
-- Organizar o painel atual em estrutura de projeto.
-- Manter compatibilidade com Issabel antigo.
-- Preservar o painel atual de ramais/troncos.
-- Adicionar filas com membros logados via AMI `QueueStatus`.
+- Monitoramento de ramais SIP, PJSIP e IAX
+- Monitoramento de troncos
+- Status `online`, `offline`, `busy` e `unknown`
+- Detecção de chamadas ativas
+- Direção da chamada: entrada, saída e interna
+- Tooltip com detalhes da chamada
+- Filas via AMI `QueueStatus`
+- Nome real das filas via `queues_config`
+- Filtro da fila `default`
+- Membros logados na fila
+- Membros disponíveis, ocupados e pausados
+- Chamadas aguardando
+- TME e TMA
+- Tempo de espera das chamadas aguardando
+- Cache e refresh otimizados
+- Compatibilidade com PHP antigo
+
+## Requisitos
+
+- Issabel/FreePBX
+- Asterisk com AMI habilitado
+- PHP compatível com o ambiente do Issabel
+- Acesso shell/root para instalação
+- Banco MySQL/MariaDB do Issabel para leitura de `devices`, `trunks` e `queues_config`
 
 ## Estrutura
 
 ```text
-backend/api/status.php          API atual do painel
-backend/lib/                    Local para refatoração gradual do backend
-backend/config/                 Configurações futuras
-frontend/index.php              Entrada do módulo Issabel
-frontend/assets/app.js          Frontend atual
-frontend/assets/style.css       Estilos atuais
-install/install.sh              Instalador no Issabel
-install/uninstall.sh            Rollback/restauração simples
-current/control_panel_original  Cópia integral do módulo enviado
-.codex/prompts/                 Prompts prontos para trabalhar com Codex
+backend/
+frontend/
+install/
+docs/
+current/control_panel_original/
 ```
 
-## Compatibilidade obrigatória
+Arquivos principais:
 
-O código precisa rodar em Issabel antigo. Evitar sintaxe moderna:
+- [backend/api/status.php](backend/api/status.php)
+- [backend/lib/](backend/lib/)
+- [frontend/index.php](frontend/index.php)
+- [frontend/assets/app.js](frontend/assets/app.js)
+- [frontend/assets/style.css](frontend/assets/style.css)
+- [install/install.sh](install/install.sh)
+- [install/uninstall.sh](install/uninstall.sh)
 
-- Não usar `??`
-- Não usar `fn()`
-- Não usar destructuring com `[]`
-- Não usar typed properties
-- Não usar type hints modernos
+## Instalação Rápida
 
-Preferir PHP compatível com 5.6/7.0.
-
-## Instalação
-
-No servidor Issabel:
+1. Leve o projeto para o servidor Issabel.
+2. Entre na pasta do projeto.
+3. Rode o instalador.
 
 ```bash
-cd /opt
-# copie ou clone este projeto para /opt/issabel-operator-panel
+tar -xzf issabel-operator-panel.tar.gz
+# ou
+unzip issabel-operator-panel.zip
 cd /opt/issabel-operator-panel
 bash install/install.sh
 ```
 
-O instalador copia para:
+Validação básica:
 
-```text
-/var/www/html/modules/control_panel
+```bash
+php -l /var/www/html/modules/control_panel/api/status.php
+find /var/www/html/modules/control_panel/lib -name "*.php" -exec php -l {} \;
+curl -skL https://127.0.0.1/modules/control_panel/api/status.php | python -m json.tool
 ```
 
-Antes de sobrescrever, ele cria backup em:
+## Atualização
 
-```text
-/root/control_panel_backup_YYYY-mm-dd_HH-MM-SS
+Fluxo recomendado:
+
+```bash
+git pull
+git status
+git add .
+git commit -m "Atualiza painel"
+bash install/install.sh
 ```
 
-## Próxima tarefa
+Se estiver consumindo uma release empacotada, copie a nova versão para o servidor e execute `bash install/install.sh` de novo para sobrescrever os arquivos instalados e recriar o backup automático.
 
-Abrir o repositório no Codex e usar o prompt:
+Se houver alteração de assets, revise o cache bust/versionamento no frontend, se aplicável.
 
-```text
-.codex/prompts/01-refatorar-e-adicionar-filas.md
+## Rollback
+
+O `install.sh` cria backup automático em `/root/control_panel_backup_YYYY-mm-dd_HH-MM-SS/control_panel`.
+
+Restauro manual:
+
+```bash
+rm -rf /var/www/html/modules/control_panel
+cp -a /root/control_panel_backup_YYYY-mm-dd_HH-MM-SS/control_panel /var/www/html/modules/control_panel
+bash install/install.sh
 ```
+
+Se o projeto estiver em git e for necessário voltar para uma tag:
+
+```bash
+git reset --hard TAG
+bash install/install.sh
+```
+
+## Testes Básicos
+
+```bash
+php -l /var/www/html/modules/control_panel/api/status.php
+curl -skL https://127.0.0.1/modules/control_panel/api/status.php | python -m json.tool
+asterisk -rx "queue show"
+asterisk -rx "core show channels concise"
+```
+
+## Compatibilidade
+
+- PHP antigo do Issabel, com foco em PHP 5.6/7.0+
+- Não usa `??`
+- Não usa `fn()`
+- Não usa destructuring com `[]`
+- Não usa typed properties
+- Não usa type hints modernos
+
+## Observações Visuais
+
+- Filas aparecem antes de ramais
+- A fila `default` é ignorada
+- O subtítulo do card da fila mostra o nome real quando disponível
+- Membros de fila exibem `display_name` no formato `Ramal 10 - Central <10>`
+- O painel é compacto e prioriza leitura rápida
+
+## Roadmap
+
+- Refinar indicadores de tempo por fila
+- Ampliar observabilidade do cache
+- Melhorar alertas visuais para chamadas e filas críticas
+- Adicionar paginação/filtros para ambientes com muitas filas
+
+## Documentação Relacionada
+
+- [docs/README.md](docs/README.md)
+- [docs/INSTALL.md](docs/INSTALL.md)
+- [docs/API.md](docs/API.md)
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- [docs/CHANGELOG.md](docs/CHANGELOG.md)
